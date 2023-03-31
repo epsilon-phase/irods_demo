@@ -40,17 +40,35 @@ RUN apt-get update && \
         irods-runtime=${irods_package_version} \
         irods-server=${irods_package_version} \
 	irods-icommands=${irods_package_version}  \
+	irods-resource-plugin-s3=${irods_resource_plugin_version} \
     && \
     apt-get clean && \
     rm -rf /var/lib/apt/lists/* /tmp/*
 
+RUN apt-get update && \
+    apt-get install -y git libcurl4-openssl-dev libxml2-dev\
+            libssl-dev libssh-dev
+
+RUN git clone https://github.com/irods/libs3
+
+WORKDIR /libs3/
+
+RUN make clean
+RUN make || true
+RUN make clean
+ENV CFLAGS=-DSIGNATURE_DEBUG=1
+ENV DESTDIR='/opt/irods-externals/libs3e4197a5e-0'
+RUN make install
+    
+
+WORKDIR /
 COPY setup-${irods_version}.input /
 RUN mv /setup-${irods_version}.input /irods_setup.input
 
-WORKDIR /
 COPY entrypoint.sh .
 
 COPY get-updated.sh .
+COPY bison_credentials .
 RUN bash get-updated.sh
 
 RUN chmod u+x ./entrypoint.sh
